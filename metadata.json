@@ -1,0 +1,6 @@
+{
+  "name": "Meditrip",
+  "description": "Fast and Trusted Indian Visa Processing from Bangladesh. Custom medical and business visa appointment checklists, Slot Booking assistance, and reliable consultancy support.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

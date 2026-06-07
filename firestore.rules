@@ -1,0 +1,112 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Globally reusable primitive helpers
+    function isValidId(id) { 
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+    }
+    function incoming() { 
+      return request.resource.data; 
+    }
+    function existing() { 
+      return resource.data; 
+    }
+    function isSignedIn() { 
+      return request.auth != null; 
+    }
+    function isVerifiedUser() {
+      return isSignedIn() && (request.auth.token.email_verified == true);
+    }
+    function isAdmin() {
+      return request.auth != null &&
+             request.auth.token != null &&
+             'email' in request.auth.token &&
+             request.auth.token.email.matches('(?i)^mohammadnurhasnat@gmail\\.com$');
+    }
+
+    // 2. Entity: User Profile Validation Helper (Strict type and bounds checks)
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId.size() <= 128
+        && data.email is string && data.email.size() <= 150
+        && (!('name' in data) || (data.name is string && data.name.size() <= 200))
+        && data.createdAt is timestamp;
+    }
+
+    // User Profile matching block
+    match /user_profiles/{userId} {
+      allow get: if isSignedIn() && (userId == request.auth.uid);
+      allow create: if isSignedIn() && (userId == request.auth.uid) 
+        && isValidUserProfile(incoming()) 
+        && incoming().userId == request.auth.uid 
+        && incoming().createdAt == request.time;
+      allow update: if isSignedIn() && (userId == request.auth.uid)
+        && isValidUserProfile(incoming())
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['name', 'updatedAt'])
+        );
+    }
+
+    // Public configurations
+    match /settings/{settingsId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /pricing/{pricingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Chat sessions and attachments permissions
+    match /chat_attachments/{attachmentId} {
+      allow read, write: if true;
+    }
+    match /chat_sessions/{sessionId} {
+      allow read, write: if true;
+    }
+
+    // 3. Entity: Visa Application Validation Helper 
+    function isValidApplication(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.userId is string && data.userId.size() <= 128
+        && data.name is string && data.name.size() <= 200
+        && (!('phone' in data) || (data.phone is string && data.phone.size() <= 50))
+        && data.visaType is string && data.visaType.size() <= 100
+        && (!('notes' in data) || (data.notes is string && data.notes.size() <= 2000))
+        && (!('package' in data) || (data.package is string && data.package.size() <= 100))
+        && data.status is string && (data.status == 'pending' || data.status == 'reviewing' || data.status == 'completed')
+        && data.createdAt is timestamp;
+    }
+
+    // Visa Application matching block
+    match /applications/{applicationId} {
+      allow get: if (isSignedIn() && existing().userId == request.auth.uid) || isAdmin();
+      allow list: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
+      
+      // Allow unauthenticated creation for guest users (anonymous)
+      allow create: if isValidId(applicationId)
+        && incoming().status == 'pending';
+        
+      allow update: if isSignedIn() && isValidId(applicationId)
+        && isValidApplication(incoming())
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && (
+          // Case 1: Standard user (owner) cannot change status
+          (existing().userId == request.auth.uid && incoming().status == existing().status && (
+            incoming().diff(existing()).affectedKeys().hasOnly(['name', 'phone', 'visaType', 'notes', 'package', 'updatedAt'])
+          )) ||
+          // Case 2: Admin can change status and details
+          (isAdmin() && (
+            incoming().diff(existing()).affectedKeys().hasOnly(['name', 'phone', 'visaType', 'notes', 'package', 'status', 'updatedAt'])
+          ))
+        );
+        
+      allow delete: if isSignedIn() && (
+        (existing().userId == request.auth.uid && existing().status == 'pending') ||
+        isAdmin()
+      );
+    }
+  }
+}

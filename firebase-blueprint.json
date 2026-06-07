@@ -1,0 +1,101 @@
+{
+  "entities": {
+    "user_profiles": {
+      "title": "User Profiles",
+      "description": "Information about the authenticated users",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The unique user ID from Firebase Authentication"
+        },
+        "name": {
+          "type": "string",
+          "description": "The user's display name"
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The date and time the profile was created"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The date and time the profile was last updated"
+        }
+      },
+      "required": ["userId", "email", "createdAt"]
+    },
+    "applications": {
+      "title": "Visa Applications",
+      "description": "Visa applications and consulting helper submissions created by users",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the application"
+        },
+        "userId": {
+          "type": "string",
+          "description": "UID of the owner"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the applicant"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Phone number of the applicant"
+        },
+        "visaType": {
+          "type": "string",
+          "description": "Selected visa service/category"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Applicant specifications and timelines"
+        },
+        "package": {
+          "type": "string",
+          "description": "Selected charge or processing package"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "reviewing", "completed"],
+          "description": "Current tracking status of this application"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "userId", "name", "phone", "visaType", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/user_profiles/{userId}": {
+      "schema": "user_profiles",
+      "description": "Secure storage of authenticated user profile info"
+    },
+    "/applications/{applicationId}": {
+      "schema": "applications",
+      "description": "Submitted applications for processing"
+    },
+    "/chat_sessions/{sessionId}": {
+      "schema": "object",
+      "description": "Floating chat sessions including attachments and conversation history"
+    },
+    "/chat_attachments/{attachmentId}": {
+      "schema": "object",
+      "description": "Base64 document and image attachments submitted through user support chat"
+    }
+  }
+}
